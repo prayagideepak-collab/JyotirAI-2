@@ -97,7 +97,9 @@ fun ProfilesScreen(onBack: () -> Unit) {
                         birthPlace = "Prayagraj",
                         latitude = 25.4358,
                         longitude = 81.8463,
-                        isDefault = false
+                        isDefault = false,
+                        isExample = true,
+                        isDemo = false
                     )
                 )
                 dao.insertProfile(
@@ -108,7 +110,9 @@ fun ProfilesScreen(onBack: () -> Unit) {
                         birthPlace = "Prayagraj, Uttar Pradesh, India",
                         latitude = 25.4358,
                         longitude = 81.8463,
-                        isDefault = true
+                        isDefault = true,
+                        isExample = false,
+                        isDemo = true
                     )
                 )
             }

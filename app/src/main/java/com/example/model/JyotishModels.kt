@@ -16,7 +16,9 @@ data class ProfileEntity(
     val timezone: String = "Asia/Kolkata",
     val gender: String = "Male",
     val isDefault: Boolean = false,
-    val profileImageUri: String? = null
+    val profileImageUri: String? = null,
+    val isExample: Boolean = false,
+    val isDemo: Boolean = false
 )
 
 typealias Profile = ProfileEntity

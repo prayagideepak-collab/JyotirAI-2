@@ -37,7 +37,7 @@ interface ProfileDao {
     suspend fun setDefaultProfile(id: Long)
 }
 
-@Database(entities = [Profile::class, CityEntity::class], version = 4, exportSchema = false)
+@Database(entities = [Profile::class, CityEntity::class], version = 5, exportSchema = false)
 abstract class JyotishDatabase : RoomDatabase() {
     abstract fun profileDao(): ProfileDao
     abstract fun cityDao(): CityDao

@@ -59,6 +59,13 @@ object AstrologyCalculator {
         )
     }
 
+    fun getPersonalizedPrediction(profile: com.example.model.ProfileEntity?, date: String): PersonalizedPrediction? {
+        if (profile == null || profile.isExample) {
+            return null
+        }
+        return getPersonalizedPrediction(profile.id, profile.name, date)
+    }
+
     fun getPersonalizedPrediction(profileId: Long, profileName: String, date: String): PersonalizedPrediction {
         val hash = abs((profileName + date).hashCode())
         val overviews = listOf(

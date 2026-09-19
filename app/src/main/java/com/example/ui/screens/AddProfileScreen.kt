@@ -64,6 +64,8 @@ fun AddProfileScreen(
     val dao = remember { JyotishDatabase.getDatabase(context).profileDao() }
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
+    var onboardingStep by remember { mutableStateOf(0) } // 0 = Form Input, 1 = Final Review Screen
+
     var name by remember { mutableStateOf("") }
     var gender by remember { mutableStateOf("पुरुष") } // पुरुष / महिला / अन्य
     var birthDate by remember { mutableStateOf("15/08/1995") }
@@ -104,7 +106,6 @@ fun AddProfileScreen(
             val selectedCal = Calendar.getInstance().apply {
                 set(selectedYear, selectedMonth, selectedDay)
             }
-            // Future date validation
             if (selectedCal.after(Calendar.getInstance())) {
                 Toast.makeText(context, "जन्म तिथि भविष्य की नहीं हो सकती।", Toast.LENGTH_SHORT).show()
                 return@DatePickerDialog
@@ -173,11 +174,15 @@ fun AddProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("नया जन्म प्रोफाइल जोड़ें (Onboarding)") },
+                title = { Text(if (onboardingStep == 0) "नया जन्म प्रोफाइल जोड़ें (Onboarding)" else "विवरण समीक्षा (Final Review)") },
                 navigationIcon = {
                     IconButton(onClick = {
                         view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                        onBack()
+                        if (onboardingStep == 1) {
+                            onboardingStep = 0
+                        } else {
+                            onBack()
+                        }
                     }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
@@ -195,262 +200,334 @@ fun AddProfileScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            item {
-                // Camera Avatar Picker
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer)
-                        .clickable {
-                            view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                            cameraLauncher.launch(null)
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (!capturedImageUri.isNullOrBlank()) {
-                        AsyncImage(model = capturedImageUri, contentDescription = "Profile Photo", modifier = Modifier.fillMaxSize())
-                    } else {
-                        Icon(Icons.Default.Person, contentDescription = "User", tint = SaffronPrimary, modifier = Modifier.size(36.dp))
-                    }
+            if (onboardingStep == 0) {
+                item {
+                    // Camera Avatar Picker
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.25f)),
-                        contentAlignment = Alignment.BottomCenter
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .clickable {
+                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                cameraLauncher.launch(null)
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(bottom = 4.dp)
+                        if (!capturedImageUri.isNullOrBlank()) {
+                            AsyncImage(model = capturedImageUri, contentDescription = "Profile Photo", modifier = Modifier.fillMaxSize())
+                        } else {
+                            Icon(Icons.Default.Person, contentDescription = "User", tint = SaffronPrimary, modifier = Modifier.size(36.dp))
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.25f)),
+                            contentAlignment = Alignment.BottomCenter
                         ) {
-                            Icon(Icons.Default.CameraAlt, contentDescription = "Camera", tint = Color.White, modifier = Modifier.size(14.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            ) {
+                                Icon(Icons.Default.CameraAlt, contentDescription = "Camera", tint = Color.White, modifier = Modifier.size(14.dp))
+                            }
                         }
                     }
                 }
-            }
 
-            item {
-                Text(
-                    text = "प्रोफाइल फोटो के लिए आइकॉन पर टैप करें (अधिकतम 3 प्रोफाइल)",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+                item {
+                    Text(
+                        text = "प्रोफाइल फोटो के लिए आइकॉन पर टैप करें (अधिकतम 3 प्रोफाइल)",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
-            item {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("पूरा नाम (Full Name) *") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
-                )
-            }
+                item {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("पूरा नाम (Full Name) *") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                }
 
-            // Gender Selection
-            item {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text("लिंग (Gender):", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(modifier = Modifier.height(4.dp))
+                // Gender Selection
+                item {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text("लिंग (Gender):", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            listOf("पुरुष", "महिला", "अन्य").forEach { option ->
+                                OutlinedButton(
+                                    onClick = { gender = option },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = if (gender == option) SaffronPrimary.copy(alpha = 0.15f) else Color.Transparent,
+                                        contentColor = if (gender == option) SaffronPrimary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                ) {
+                                    Text(option, fontSize = 13.sp, fontWeight = if (gender == option) FontWeight.Bold else FontWeight.Normal)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Date of Birth Picker (Disabled text input / readOnly = true)
+                item {
+                    OutlinedTextField(
+                        value = birthDate,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("जन्म तिथि (Date of Birth) *") },
+                        trailingIcon = {
+                            IconButton(onClick = { showNativeDatePicker() }) {
+                                Icon(Icons.Default.CalendarToday, contentDescription = "Pick Date", tint = SaffronPrimary)
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showNativeDatePicker() },
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                }
+
+                // Time of Birth Picker (Disabled text input / readOnly = true)
+                item {
+                    OutlinedTextField(
+                        value = birthTime,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("जन्म समय (Time of Birth) *") },
+                        trailingIcon = {
+                            IconButton(onClick = { showNativeTimePicker() }) {
+                                Icon(Icons.Default.Schedule, contentDescription = "Pick Time", tint = SaffronPrimary)
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showNativeTimePicker() },
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                }
+
+                // Place of Birth, GPS, Map Pin Drop & City Search
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.LocationOn, contentDescription = "Location", tint = SaffronPrimary, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("जन्म स्थान और कोऑर्डिनेट्स (Birth Location)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                }
+
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                            fetchGpsLocation()
+                                        },
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Icon(Icons.Default.GpsFixed, contentDescription = "GPS", tint = SaffronPrimary, modifier = Modifier.size(12.dp))
+                                        Spacer(modifier = Modifier.width(2.dp))
+                                        Text("GPS", fontSize = 10.sp)
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = {
+                                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                            showMapDialog = true
+                                        },
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Icon(Icons.Default.LocationOn, contentDescription = "Map", tint = SaffronPrimary, modifier = Modifier.size(12.dp))
+                                        Spacer(modifier = Modifier.width(2.dp))
+                                        Text("नक्शा पिन", fontSize = 10.sp)
+                                    }
+                                }
+                            }
+
+                            CitySearchView(
+                                query = birthPlaceQuery.ifBlank { searchQuery },
+                                onQueryChanged = { query ->
+                                    birthPlaceQuery = query
+                                    citySearchViewModel.onQueryChanged(query)
+                                },
+                                suggestions = searchResults,
+                                onCitySelected = { city ->
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    birthPlaceQuery = "${city.cityName}, ${city.state}, India"
+                                    latitude = city.latitude.toString()
+                                    longitude = city.longitude.toString()
+                                    timezone = city.timezone
+                                    citySearchViewModel.onQueryChanged("")
+                                }
+                            )
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedTextField(
+                                    value = latitude,
+                                    onValueChange = { latitude = it },
+                                    label = { Text("अक्षांश (Lat)") },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    singleLine = true
+                                )
+                                OutlinedTextField(
+                                    value = longitude,
+                                    onValueChange = { longitude = it },
+                                    label = { Text("देशांतर (Lon)") },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    singleLine = true
+                                )
+                            }
+
+                            Text("Timezone: $timezone | Historical names mapped (Allahabad -> Prayagraj)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                            if (name.isBlank()) {
+                                Toast.makeText(context, "कृपया पूरा नाम दर्ज करें", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            if (birthPlaceQuery.isBlank()) {
+                                Toast.makeText(context, "कृपया जन्म स्थान चुनें या खोजें", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            // Form validation passed -> proceed to Final Review screen
+                            onboardingStep = 1
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary)
+                    ) {
+                        Text("समीक्षा करें (Review Birth Data)", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    }
+                }
+            } else {
+                // Step 1: Final Review Screen in Hindi
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text("📋 प्रोफाइल जन्म विवरण समीक्षा (Final Review)", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Divider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+
+                            ReviewRow("पूरा नाम (Name):", name)
+                            ReviewRow("लिंग (Gender):", gender)
+                            ReviewRow("जन्म तिथि (DOB):", birthDate)
+                            ReviewRow("जन्म समय (Time):", birthTime)
+                            ReviewRow("जन्म स्थान (Place):", birthPlaceQuery)
+                            ReviewRow("अक्षांश / देशांतर:", "$latitude, $longitude")
+                            ReviewRow("टाइमज़ोन (Timezone):", timezone)
+
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "यह विवरण आपकी जन्म कुंडली, विंशोत्तरी महादशा, पंचांग और दैनिक भविष्यवाणियों के लिए उपयोग किया जाएगा।",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(12.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        listOf("पुरुष", "महिला", "अन्य").forEach { option ->
-                            OutlinedButton(
-                                onClick = { gender = option },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = if (gender == option) SaffronPrimary.copy(alpha = 0.15f) else Color.Transparent,
-                                    contentColor = if (gender == option) SaffronPrimary else MaterialTheme.colorScheme.onSurface
-                                )
-                            ) {
-                                Text(option, fontSize = 13.sp, fontWeight = if (gender == option) FontWeight.Bold else FontWeight.Normal)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Date of Birth Picker (No manual typing)
-            item {
-                OutlinedTextField(
-                    value = birthDate,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("जन्म तिथि (Date of Birth) *") },
-                    trailingIcon = {
-                        IconButton(onClick = { showNativeDatePicker() }) {
-                            Icon(Icons.Default.CalendarToday, contentDescription = "Pick Date", tint = SaffronPrimary)
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showNativeDatePicker() },
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
-                )
-            }
-
-            // Time of Birth Picker (No manual typing)
-            item {
-                OutlinedTextField(
-                    value = birthTime,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("जन्म समय (Time of Birth) *") },
-                    trailingIcon = {
-                        IconButton(onClick = { showNativeTimePicker() }) {
-                            Icon(Icons.Default.Schedule, contentDescription = "Pick Time", tint = SaffronPrimary)
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showNativeTimePicker() },
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
-                )
-            }
-
-            // Place of Birth, GPS, Map Pin Drop & City Search
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        OutlinedButton(
+                            onClick = { onboardingStep = 0 },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(50.dp),
+                            shape = RoundedCornerShape(14.dp)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.LocationOn, contentDescription = "Location", tint = SaffronPrimary, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("जन्म स्थान और कोऑर्डिनेट्स (Birth Location)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            }
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                        fetchGpsLocation()
-                                    },
-                                    shape = RoundedCornerShape(8.dp),
-                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Icon(Icons.Default.GpsFixed, contentDescription = "GPS", tint = SaffronPrimary, modifier = Modifier.size(12.dp))
-                                    Spacer(modifier = Modifier.width(2.dp))
-                                    Text("GPS", fontSize = 10.sp)
-                                }
-
-                                OutlinedButton(
-                                    onClick = {
-                                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                        showMapDialog = true
-                                    },
-                                    shape = RoundedCornerShape(8.dp),
-                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Icon(Icons.Default.LocationOn, contentDescription = "Map", tint = SaffronPrimary, modifier = Modifier.size(12.dp))
-                                    Spacer(modifier = Modifier.width(2.dp))
-                                    Text("नक्शा पिन", fontSize = 10.sp)
-                                }
-                            }
+                            Text("संशोधित करें (Edit)")
                         }
 
-                        CitySearchView(
-                            query = birthPlaceQuery.ifBlank { searchQuery },
-                            onQueryChanged = { query ->
-                                birthPlaceQuery = query
-                                citySearchViewModel.onQueryChanged(query)
+                        Button(
+                            onClick = {
+                                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                scope.launch(Dispatchers.IO) {
+                                    val count = dao.getProfileCount()
+                                    if (count >= 3) {
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(context, "अधिकतम 3 प्रोफाइल समर्थित हैं।", Toast.LENGTH_SHORT).show()
+                                        }
+                                        return@launch
+                                    }
+                                    val finalPlace = birthPlaceQuery
+
+                                    val newProfile = ProfileEntity(
+                                        name = name.trim(),
+                                        birthDate = birthDate,
+                                        birthTime = birthTime,
+                                        birthPlace = finalPlace,
+                                        latitude = latitude.toDoubleOrNull() ?: 25.4358,
+                                        longitude = longitude.toDoubleOrNull() ?: 81.8463,
+                                        timezone = timezone,
+                                        gender = gender,
+                                        isDefault = count == 0,
+                                        profileImageUri = capturedImageUri,
+                                        isExample = false,
+                                        isDemo = false
+                                    )
+                                    dao.insertProfile(newProfile)
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, "प्रोफाइल सफलतापूर्वक जोड़ी गई एवं गणना प्रारंभ हुई!", Toast.LENGTH_SHORT).show()
+                                        onBack()
+                                    }
+                                }
                             },
-                            suggestions = searchResults,
-                            onCitySelected = { city ->
-                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                birthPlaceQuery = "${city.cityName}, ${city.state}, India"
-                                latitude = city.latitude.toString()
-                                longitude = city.longitude.toString()
-                                timezone = city.timezone
-                                citySearchViewModel.onQueryChanged("")
-                            }
-                        )
-
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = latitude,
-                                onValueChange = { latitude = it },
-                                label = { Text("अक्षांश (Lat)") },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(8.dp),
-                                singleLine = true
-                            )
-                            OutlinedTextField(
-                                value = longitude,
-                                onValueChange = { longitude = it },
-                                label = { Text("देशांतर (Lon)") },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(8.dp),
-                                singleLine = true
-                            )
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(50.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary)
+                        ) {
+                            Text("पुष्टि करें (Confirm & Save)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
-
-                        Text("Timezone: $timezone | Historical names mapped (Allahabad -> Prayagraj)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                }
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = {
-                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                        if (name.isBlank()) {
-                            Toast.makeText(context, "कृपया पूरा नाम दर्ज करें", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        if (birthPlaceQuery.isBlank()) {
-                            Toast.makeText(context, "कृपया जन्म स्थान चुनें या खोजें", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        scope.launch(Dispatchers.IO) {
-                            val count = dao.getProfileCount()
-                            if (count >= 3) {
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, "अधिकतम 3 प्रोफाइल समर्थित हैं।", Toast.LENGTH_SHORT).show()
-                                }
-                                return@launch
-                            }
-                            val finalPlace = birthPlaceQuery
-
-                            val newProfile = ProfileEntity(
-                                name = name.trim(),
-                                birthDate = birthDate,
-                                birthTime = birthTime,
-                                birthPlace = finalPlace,
-                                latitude = latitude.toDoubleOrNull() ?: 25.4358,
-                                longitude = longitude.toDoubleOrNull() ?: 81.8463,
-                                timezone = timezone,
-                                isDefault = count == 0,
-                                profileImageUri = capturedImageUri
-                            )
-                            dao.insertProfile(newProfile)
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(context, "प्रोफाइल सफलतापूर्वक जोड़ी गई ($finalPlace)!", Toast.LENGTH_SHORT).show()
-                                onBack()
-                            }
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary)
-                ) {
-                    Text("प्रोफाइल सुरक्षित करें और गणना करें (Save Profile)", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
             }
         }
@@ -469,5 +546,16 @@ fun AddProfileScreen(
             },
             onDismiss = { showMapDialog = false }
         )
+    }
+}
+
+@Composable
+fun ReviewRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+        Text(value, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
     }
 }

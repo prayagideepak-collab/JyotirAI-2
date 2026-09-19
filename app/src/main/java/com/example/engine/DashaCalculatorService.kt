@@ -25,6 +25,9 @@ data class DetailedDashaPeriod(
 object DashaCalculatorService {
 
     fun calculateVimshottariDasha(profile: Profile?): List<DetailedDashaPeriod> {
+        if (profile == null || profile.isExample) {
+            return emptyList()
+        }
         // Base birth year from profile birthDate (DD/MM/YYYY) or default to 1995
         val birthYear = profile?.birthDate?.let { dateStr ->
             val parts = dateStr.split("/")
