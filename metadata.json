@@ -1,0 +1,7 @@
+{
+  "name": "Jyotish",
+  "description": "A comprehensive Vedic Astrology and Kundli application featuring AI Astrologer, Panchang, Muhurta, Dasha analysis, and multi-profile support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
