@@ -4,9 +4,8 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -83,6 +82,8 @@ fun HomeScreen(
         MenuFeature("Settings", "सेटिंग्स", Icons.Default.Settings, "settings")
     )
 
+    val featureRows = features.chunked(2)
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -138,7 +139,18 @@ fun HomeScreen(
         if (showGlossary) {
             com.example.ui.components.GlossaryDialog(onDismiss = { showGlossary = false })
         }
-        Column(
+
+        val earthState = remember(activeProfile) {
+            val lat = activeProfile?.latitude ?: 25.4358
+            val lon = activeProfile?.longitude ?: 81.8463
+            val place = activeProfile?.birthPlace ?: "Prayagraj, Uttar Pradesh"
+            val parts = place.split(",")
+            val city = parts.getOrNull(0)?.trim() ?: "Prayagraj"
+            val state = parts.getOrNull(1)?.trim() ?: "Uttar Pradesh"
+            com.example.engine.LiveEarthEngine.calculateEarthState(lat, lon, city, state)
+        }
+
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
@@ -146,83 +158,95 @@ fun HomeScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Active Profile Summary Card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showProfileBottomSheet = true },
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Person, contentDescription = "Profile", tint = SaffronPrimary, modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = activeProfile?.name ?: "कोई सक्रिय प्रोफाइल नहीं",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = SaffronPrimary
+            // Live Earth Hero Scene (Scrollable)
+            item {
+                com.example.ui.components.LiveEarthScene(earthState = earthState)
+            }
+
+            // Active Profile Summary Card (Scrollable)
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showProfileBottomSheet = true },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Switch (बदलें)", fontSize = 10.sp, color = Color.White, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Person, contentDescription = "Profile", tint = SaffronPrimary, modifier = Modifier.size(24.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = activeProfile?.name ?: "कोई सक्रिय प्रोफाइल नहीं",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = SaffronPrimary
+                            ) {
+                                Text("Switch (बदलें)", fontSize = 10.sp, color = Color.White, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "जन्म स्थान: ${activeProfile?.birthPlace ?: '–'} | DOB: ${activeProfile?.birthDate ?: '–'}",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                    )
-                    Divider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "जन्म स्थान: ${activeProfile?.birthPlace ?: '–'} | DOB: ${activeProfile?.birthDate ?: '–'}",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        )
+                        Divider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text("सूर्योदय", fontSize = 10.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
-                            Text(panchang.sunrise, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                        }
-                        Column {
-                            Text("ब्रह्म मुहूर्त", fontSize = 10.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
-                            Text(panchang.brahmaMuhurta, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = SaffronPrimary)
-                        }
-                        Column {
-                            Text("सूर्यास्त", fontSize = 10.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
-                            Text(panchang.sunset, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text("सूर्योदय", fontSize = 10.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                                Text(panchang.sunrise, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            }
+                            Column {
+                                Text("ब्रह्म मुहूर्त", fontSize = 10.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                                Text(panchang.brahmaMuhurta, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = SaffronPrimary)
+                            }
+                            Column {
+                                Text("सूर्यास्त", fontSize = 10.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                                Text(panchang.sunset, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            }
                         }
                     }
                 }
             }
 
-            Text(
-                "वेदिक ज्योतिष सेवाएँ (Vedic Services)",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onBackground
-            )
+            item {
+                Text(
+                    "वेदिक ज्योतिष सेवाएँ (Vedic Services)",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
 
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) {
-                items(features) { feature ->
-                    FeatureCard(feature = feature, onClick = { onNavigate(feature.route) })
+            items(featureRows) { rowFeatures ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    rowFeatures.forEach { feature ->
+                        Box(modifier = Modifier.weight(1f)) {
+                            FeatureCard(feature = feature, onClick = { onNavigate(feature.route) })
+                        }
+                    }
+                    if (rowFeatures.size == 1) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
                 }
             }
         }
